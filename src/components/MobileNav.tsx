@@ -10,7 +10,7 @@ const MobileNav: React.FC<MobileNavProps> = ({ activeCategory, onCategoryClick }
   const { categories } = useCategories();
 
   return (
-    <div className="sticky top-20 z-40 bg-starrs-mint/95 backdrop-blur-sm border-b border-starrs-teal/30 md:hidden shadow-sm">
+    <div className="sticky top-16 z-40 bg-starrs-mint/95 backdrop-blur-sm border-b border-starrs-teal/30 md:hidden shadow-sm">
       <div className="flex overflow-x-auto scrollbar-hide px-4 py-3">
         {categories.map((category) => (
           <button

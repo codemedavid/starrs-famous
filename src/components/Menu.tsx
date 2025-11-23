@@ -44,9 +44,9 @@ const Menu: React.FC<MenuProps> = ({ menuItems, addToCart, cartItems, updateQuan
     setActiveCategory(categoryId);
     const element = document.getElementById(categoryId);
     if (element) {
-      const headerHeight = 64; // Header height
+      const headerHeight = 64; // Header height (h-16)
       const mobileNavHeight = 60; // Mobile nav height
-      const offset = headerHeight + mobileNavHeight + 20; // Extra padding
+      const offset = headerHeight + mobileNavHeight + 10; // Extra padding
       const elementPosition = element.offsetTop - offset;
       
       window.scrollTo({
@@ -91,7 +91,7 @@ const Menu: React.FC<MenuProps> = ({ menuItems, addToCart, cartItems, updateQuan
         activeCategory={activeCategory}
         onCategoryClick={handleCategoryClick}
       />
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 md:py-12">
+      <main className="max-w-7xl mx-auto px-4 py-6 md:py-12">
       <div className="text-center mb-6 md:mb-12">
         <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-starrs-teal-dark mb-2 md:mb-4" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>Our Menu</h2>
         <p className="text-sm sm:text-base md:text-lg text-starrs-teal-dark/80 max-w-2xl mx-auto font-medium px-2">
@@ -112,7 +112,7 @@ const Menu: React.FC<MenuProps> = ({ menuItems, addToCart, cartItems, updateQuan
               <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-starrs-teal-dark" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>{category.name}</h3>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {categoryItems.map((item) => {
                 const cartItem = cartItems.find(cartItem => cartItem.id === item.id);
                 return (
