@@ -21,7 +21,7 @@ if (!API_KEY || !API_SECRET) {
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey'
 };
 
 const quoteBaseUrl = (sandbox: boolean) =>
@@ -70,6 +70,12 @@ const makeLalamoveRequest = async (
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.error('Lalamove upstream error', {
+      status: response.status,
+      body: errorText,
+      url: `${quoteBaseUrl(sandbox)}${path}`,
+      payload: bodyString
+    });
     throw new Error(errorText || 'Lalamove API request failed');
   }
 
@@ -249,7 +255,7 @@ const handler = async (req: Request) => {
   }
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: CORS_HEADERS });
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
   }
 
   const url = new URL(req.url);

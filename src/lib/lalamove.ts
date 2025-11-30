@@ -38,7 +38,27 @@ const requireProxy = () => {
 
 const buildFunctionUrl = (path: string) => {
   const base = requireProxy();
-  return `${base.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
+  const key = requireSupabaseKey();
+  const trimmedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${base.replace(/\/$/, '')}${trimmedPath}?apikey=${encodeURIComponent(key)}`;
+};
+
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const requireSupabaseKey = () => {
+  if (!SUPABASE_ANON_KEY) {
+    throw new Error('Missing VITE_SUPABASE_ANON_KEY; needed for Edge Function authentication');
+  }
+  return SUPABASE_ANON_KEY;
+};
+
+const buildProxyHeaders = () => {
+  const key = requireSupabaseKey();
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${key}`,
+    apikey: key
+  };
 };
 
 const ensureSuccess = async (response: Response) => {
@@ -98,9 +118,7 @@ export const fetchDeliveryQuotation = async (
 ): Promise<DeliveryQuote> => {
   const response = await fetch(buildFunctionUrl('/quote'), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: buildProxyHeaders(),
     body: JSON.stringify({
       deliveryAddress,
       deliveryLat: deliveryCoordinates.lat,
@@ -134,9 +152,7 @@ export const createDeliveryOrder = async (
 ): Promise<DeliveryOrderResult> => {
   const response = await fetch(buildFunctionUrl('/order'), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: buildProxyHeaders(),
     body: JSON.stringify({
       quotationId,
       recipientName,
