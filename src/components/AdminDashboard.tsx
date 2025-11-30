@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { Plus, Edit, Trash2, Save, X, ArrowLeft, Coffee, TrendingUp, Package, Users, Lock, FolderOpen, CreditCard, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, Save, X, ArrowLeft, Coffee, TrendingUp, Package, Users, Lock, FolderOpen, CreditCard, Settings, ShoppingCart } from 'lucide-react';
 import { MenuItem, Variation, AddOn } from '../types';
 import { addOnCategories } from '../data/menuData';
 import { useMenu } from '../hooks/useMenu';
 import { useCategories, Category } from '../hooks/useCategories';
+import { useOrders } from '../hooks/useOrders';
 import ImageUpload from './ImageUpload';
 import CategoryManager from './CategoryManager';
 import PaymentMethodManager from './PaymentMethodManager';
 import SiteSettingsManager from './SiteSettingsManager';
+import OrderManager from './OrderManager';
 
 const AdminDashboard: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -17,7 +19,16 @@ const AdminDashboard: React.FC = () => {
   const [loginError, setLoginError] = useState('');
   const { menuItems, loading, addMenuItem, updateMenuItem, deleteMenuItem } = useMenu();
   const { categories } = useCategories();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'items' | 'add' | 'edit' | 'categories' | 'payments' | 'settings'>('dashboard');
+  const { getOrderStats } = useOrders();
+  const [currentView, setCurrentView] = useState<'dashboard' | 'items' | 'add' | 'edit' | 'categories' | 'payments' | 'settings' | 'orders'>('dashboard');
+  const [orderStats, setOrderStats] = useState({
+    total_orders: 0,
+    pending_orders: 0,
+    today_orders: 0,
+    today_revenue: 0,
+    completed_orders: 0,
+    cancelled_orders: 0
+  });
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -219,6 +230,22 @@ const AdminDashboard: React.FC = () => {
   const removeAddOn = (index: number) => {
     const updatedAddOns = formData.addOns?.filter((_, i) => i !== index) || [];
     setFormData({ ...formData, addOns: updatedAddOns });
+  };
+
+  // Load order stats
+  useEffect(() => {
+    if (currentView === 'dashboard') {
+      loadOrderStats();
+    }
+  }, [currentView]);
+
+  const loadOrderStats = async () => {
+    try {
+      const stats = await getOrderStats();
+      setOrderStats(stats);
+    } catch (error) {
+      console.error('Error loading order stats:', error);
+    }
   };
 
   // Dashboard Stats
@@ -888,6 +915,11 @@ const AdminDashboard: React.FC = () => {
     );
   }
 
+  // Orders View
+  if (currentView === 'orders') {
+    return <OrderManager onBack={() => setCurrentView('dashboard')} />;
+  }
+
   // Categories View
   if (currentView === 'categories') {
     return <CategoryManager onBack={() => setCurrentView('dashboard')} />;
@@ -983,24 +1015,24 @@ const AdminDashboard: React.FC = () => {
 
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-cream-500 rounded-lg">
-                <Coffee className="h-6 w-6 text-white" />
+              <div className="p-2 bg-yellow-500 rounded-lg">
+                <ShoppingCart className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Popular Items</p>
-                <p className="text-2xl font-semibold text-gray-900">{popularItems}</p>
+                <p className="text-sm font-medium text-gray-600">Pending Orders</p>
+                <p className="text-2xl font-semibold text-gray-900">{orderStats.pending_orders}</p>
               </div>
             </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center">
-              <div className="p-2 bg-green-500 rounded-lg">
-                <Users className="h-6 w-6 text-white" />
+              <div className="p-2 bg-emerald-500 rounded-lg">
+                <TrendingUp className="h-6 w-6 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active</p>
-                <p className="text-2xl font-semibold text-gray-900">Online</p>
+                <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
+                <p className="text-2xl font-semibold text-gray-900">₱{orderStats.today_revenue.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -1024,6 +1056,18 @@ const AdminDashboard: React.FC = () => {
               >
                 <Package className="h-5 w-5 text-gray-400" />
                 <span className="font-medium text-gray-900">Manage Menu Items</span>
+              </button>
+              <button
+                onClick={() => setCurrentView('orders')}
+                className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
+              >
+                <ShoppingCart className="h-5 w-5 text-gray-400" />
+                <span className="font-medium text-gray-900">Manage Orders</span>
+                {orderStats.pending_orders > 0 && (
+                  <span className="ml-auto bg-yellow-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                    {orderStats.pending_orders}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setCurrentView('categories')}

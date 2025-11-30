@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Save, Upload, X } from 'lucide-react';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { useImageUpload } from '../hooks/useImageUpload';
+import { useAddressAutocomplete } from '../hooks/useAddressAutocomplete';
+import type { AddressSuggestion } from '../types';
 
 const SiteSettingsManager: React.FC = () => {
   const { siteSettings, loading, updateSiteSettings } = useSiteSettings();
@@ -11,10 +13,28 @@ const SiteSettingsManager: React.FC = () => {
     site_name: '',
     site_description: '',
     currency: '',
-    currency_code: ''
+    currency_code: '',
+    lalamove_market: '',
+    lalamove_service_type: '',
+    lalamove_sandbox: 'true',
+    lalamove_api_key: '',
+    lalamove_api_secret: '',
+    lalamove_store_name: '',
+    lalamove_store_phone: '',
+    lalamove_store_address: '',
+    lalamove_store_latitude: '',
+    lalamove_store_longitude: ''
   });
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [storeAddressQuery, setStoreAddressQuery] = useState('');
+  const [showStoreSuggestions, setShowStoreSuggestions] = useState(false);
+  const [selectedStoreSuggestionIndex, setSelectedStoreSuggestionIndex] = useState(-1);
+  const storeAddressInputRef = useRef<HTMLInputElement>(null);
+  const storeSuggestionsRef = useRef<HTMLDivElement>(null);
+  const { suggestions: storeSuggestions, loading: storeAddressLoading, error: storeAddressError } = useAddressAutocomplete(
+    isEditing ? storeAddressQuery : ''
+  );
 
   React.useEffect(() => {
     if (siteSettings) {
@@ -22,11 +42,48 @@ const SiteSettingsManager: React.FC = () => {
         site_name: siteSettings.site_name,
         site_description: siteSettings.site_description,
         currency: siteSettings.currency,
-        currency_code: siteSettings.currency_code
+        currency_code: siteSettings.currency_code,
+        lalamove_market: siteSettings.lalamove_market || '',
+        lalamove_service_type: siteSettings.lalamove_service_type || '',
+        lalamove_sandbox: siteSettings.lalamove_sandbox || 'true',
+        lalamove_api_key: siteSettings.lalamove_api_key || '',
+        lalamove_api_secret: siteSettings.lalamove_api_secret || '',
+        lalamove_store_name: siteSettings.lalamove_store_name || '',
+        lalamove_store_phone: siteSettings.lalamove_store_phone || '',
+        lalamove_store_address: siteSettings.lalamove_store_address || '',
+        lalamove_store_latitude: siteSettings.lalamove_store_latitude || '',
+        lalamove_store_longitude: siteSettings.lalamove_store_longitude || ''
       });
       setLogoPreview(siteSettings.site_logo);
+      setStoreAddressQuery(siteSettings.lalamove_store_address || '');
+      setShowStoreSuggestions(false);
+      setSelectedStoreSuggestionIndex(-1);
     }
   }, [siteSettings]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        storeAddressInputRef.current &&
+        !storeAddressInputRef.current.contains(event.target as Node) &&
+        storeSuggestionsRef.current &&
+        !storeSuggestionsRef.current.contains(event.target as Node)
+      ) {
+        setShowStoreSuggestions(false);
+        setSelectedStoreSuggestionIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setShowStoreSuggestions(false);
+      setSelectedStoreSuggestionIndex(-1);
+    }
+  }, [isEditing]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -48,6 +105,57 @@ const SiteSettingsManager: React.FC = () => {
     }
   };
 
+  const handleStoreAddressInputChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      lalamove_store_address: value
+    }));
+    setStoreAddressQuery(value);
+    setShowStoreSuggestions(true);
+    setSelectedStoreSuggestionIndex(-1);
+  };
+
+  const handleStoreAddressSelect = (suggestion: AddressSuggestion) => {
+    setFormData(prev => ({
+      ...prev,
+      lalamove_store_address: suggestion.display_name,
+      lalamove_store_latitude: suggestion.lat,
+      lalamove_store_longitude: suggestion.lon
+    }));
+    setStoreAddressQuery(suggestion.display_name);
+    setShowStoreSuggestions(false);
+    setSelectedStoreSuggestionIndex(-1);
+  };
+
+  const handleStoreAddressKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showStoreSuggestions || storeSuggestions.length === 0) return;
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedStoreSuggestionIndex(prev =>
+          prev < storeSuggestions.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedStoreSuggestionIndex(prev =>
+          prev > 0 ? prev - 1 : -1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedStoreSuggestionIndex >= 0 && selectedStoreSuggestionIndex < storeSuggestions.length) {
+          handleStoreAddressSelect(storeSuggestions[selectedStoreSuggestionIndex]);
+        }
+        break;
+      case 'Escape':
+        e.preventDefault();
+        setShowStoreSuggestions(false);
+        setSelectedStoreSuggestionIndex(-1);
+        break;
+    }
+  };
+
   const handleSave = async () => {
     try {
       let logoUrl = logoPreview;
@@ -64,7 +172,17 @@ const SiteSettingsManager: React.FC = () => {
         site_description: formData.site_description,
         currency: formData.currency,
         currency_code: formData.currency_code,
-        site_logo: logoUrl
+        site_logo: logoUrl,
+        lalamove_market: formData.lalamove_market,
+        lalamove_service_type: formData.lalamove_service_type,
+        lalamove_sandbox: formData.lalamove_sandbox,
+        lalamove_api_key: formData.lalamove_api_key,
+        lalamove_api_secret: formData.lalamove_api_secret,
+        lalamove_store_name: formData.lalamove_store_name,
+        lalamove_store_phone: formData.lalamove_store_phone,
+        lalamove_store_address: formData.lalamove_store_address,
+        lalamove_store_latitude: formData.lalamove_store_latitude,
+        lalamove_store_longitude: formData.lalamove_store_longitude
       });
 
       setIsEditing(false);
@@ -80,9 +198,20 @@ const SiteSettingsManager: React.FC = () => {
         site_name: siteSettings.site_name,
         site_description: siteSettings.site_description,
         currency: siteSettings.currency,
-        currency_code: siteSettings.currency_code
+        currency_code: siteSettings.currency_code,
+        lalamove_market: siteSettings.lalamove_market || '',
+        lalamove_service_type: siteSettings.lalamove_service_type || '',
+        lalamove_sandbox: siteSettings.lalamove_sandbox || 'true',
+        lalamove_api_key: siteSettings.lalamove_api_key || '',
+        lalamove_api_secret: siteSettings.lalamove_api_secret || '',
+        lalamove_store_name: siteSettings.lalamove_store_name || '',
+        lalamove_store_phone: siteSettings.lalamove_store_phone || '',
+        lalamove_store_address: siteSettings.lalamove_store_address || '',
+        lalamove_store_latitude: siteSettings.lalamove_store_latitude || '',
+        lalamove_store_longitude: siteSettings.lalamove_store_longitude || ''
       });
       setLogoPreview(siteSettings.site_logo);
+      setStoreAddressQuery(siteSettings.lalamove_store_address || '');
     }
     setIsEditing(false);
     setLogoFile(null);
@@ -249,6 +378,191 @@ const SiteSettingsManager: React.FC = () => {
               <p className="text-lg font-medium text-black">{siteSettings?.currency_code}</p>
             )}
           </div>
+        </div>
+        {/* Delivery / Lalamove Configuration */}
+        <div className="border-t border-gray-100 pt-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-black">Delivery / Lalamove</h3>
+              <p className="text-sm text-gray-500">Set the Lalamove market, credentials, and store pickup location used by the delivery feature.</p>
+            </div>
+          </div>
+
+          {isEditing ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Lalamove Market
+                  <input
+                    type="text"
+                    name="lalamove_market"
+                    value={formData.lalamove_market}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="PH"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Service Type
+                  <input
+                    type="text"
+                    name="lalamove_service_type"
+                    value={formData.lalamove_service_type}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    placeholder="MOTORCYCLE"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Sandbox Mode
+                  <select
+                    name="lalamove_sandbox"
+                    value={formData.lalamove_sandbox}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="true">Sandbox</option>
+                    <option value="false">Production</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  API Key
+                  <input
+                    type="text"
+                    name="lalamove_api_key"
+                    value={formData.lalamove_api_key}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                  API Secret
+                  <input
+                    type="password"
+                    name="lalamove_api_secret"
+                    value={formData.lalamove_api_secret}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Store Name
+                  <input
+                    type="text"
+                    name="lalamove_store_name"
+                    value={formData.lalamove_store_name}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Store Phone
+                  <input
+                    type="text"
+                    name="lalamove_store_phone"
+                    value={formData.lalamove_store_phone}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Store Address
+                  <div className="relative">
+                    <input
+                      ref={storeAddressInputRef}
+                      type="text"
+                      name="lalamove_store_address"
+                      value={formData.lalamove_store_address}
+                      onChange={(e) => handleStoreAddressInputChange(e.target.value)}
+                      onFocus={() => setShowStoreSuggestions(true)}
+                      onKeyDown={handleStoreAddressKeyDown}
+                      className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Search store address..."
+                    />
+                    {storeAddressLoading && (
+                      <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                        <span className="text-xs text-gray-500">Loading...</span>
+                      </div>
+                    )}
+                    {showStoreSuggestions && storeAddressQuery.trim().length >= 3 && (
+                      <div
+                        ref={storeSuggestionsRef}
+                        className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                      >
+                        {storeAddressError && (
+                          <div className="p-3 text-xs text-red-600 border-b border-gray-100">
+                            {storeAddressError}
+                          </div>
+                        )}
+                        {!storeAddressError && storeSuggestions.length === 0 && !storeAddressLoading && (
+                          <div className="p-3 text-xs text-gray-500">No addresses found.</div>
+                        )}
+                        {storeSuggestions.map((suggestion, index) => (
+                          <button
+                            key={suggestion.place_id}
+                            type="button"
+                            onClick={() => handleStoreAddressSelect(suggestion)}
+                            className={`w-full text-left px-4 py-3 border-b border-gray-100 text-sm ${
+                              index === selectedStoreSuggestionIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            <p className="font-medium text-black">{suggestion.display_name.split(',')[0]}</p>
+                            <p className="text-xs text-gray-500">
+                              {suggestion.display_name}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Store Latitude
+                  <input
+                    type="number"
+                    step="0.000001"
+                    name="lalamove_store_latitude"
+                    value={formData.lalamove_store_latitude}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Store Longitude
+                  <input
+                    type="number"
+                    step="0.000001"
+                    name="lalamove_store_longitude"
+                    value={formData.lalamove_store_longitude}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 text-sm text-gray-600">
+              <p>Market: {siteSettings?.lalamove_market || 'Not configured'}</p>
+              <p>Service Type: {siteSettings?.lalamove_service_type || 'Not configured'}</p>
+              <p>Sandbox Mode: {siteSettings?.lalamove_sandbox === 'false' ? 'Production' : 'Sandbox'}</p>
+              <p>API Key: {siteSettings?.lalamove_api_key ? 'Configured' : 'Not set'}</p>
+              <p>API Secret: {siteSettings?.lalamove_api_secret ? 'Configured' : 'Not set'}</p>
+              <p>Store Name: {siteSettings?.lalamove_store_name || 'Not set'}</p>
+              <p>Store Phone: {siteSettings?.lalamove_store_phone || 'Not set'}</p>
+              <p>Store Address: {siteSettings?.lalamove_store_address || 'Not set'}</p>
+              <p>Store Latitude: {siteSettings?.lalamove_store_latitude || 'Not set'}</p>
+              <p>Store Longitude: {siteSettings?.lalamove_store_longitude || 'Not set'}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

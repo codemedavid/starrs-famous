@@ -74,4 +74,112 @@ export interface SiteSettings {
   site_description: string;
   currency: string;
   currency_code: string;
+  lalamove_market?: string;
+  lalamove_service_type?: string;
+  lalamove_sandbox?: string;
+  lalamove_api_key?: string;
+  lalamove_api_secret?: string;
+  lalamove_store_name?: string;
+  lalamove_store_phone?: string;
+  lalamove_store_address?: string;
+  lalamove_store_latitude?: string;
+  lalamove_store_longitude?: string;
+}
+
+// Order Management Types
+export type OrderStatus = 'pending' | 'confirmed' | 'preparing' | 'ready' | 'out_for_delivery' | 'completed' | 'cancelled';
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  menu_item_id: string | null;
+  menu_item_name: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  selected_variation: Variation | null;
+  selected_add_ons: AddOn[] | null;
+  created_at: string;
+}
+
+export interface Order {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  contact_number: string;
+  service_type: ServiceType;
+  address: string | null;
+  landmark: string | null;
+  pickup_time: string | null;
+  party_size: number | null;
+  dine_in_time: string | null;
+  payment_method: string;
+  reference_number: string | null;
+  status: OrderStatus;
+  total: number;
+  notes: string | null;
+  customer_ip: string;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  order_items?: OrderItem[];
+  delivery_fee?: number | null;
+  lalamove_quotation_id?: string | null;
+  lalamove_order_id?: string | null;
+  lalamove_status?: string | null;
+  lalamove_tracking_url?: string | null;
+}
+
+export interface OrderFilters {
+  status?: OrderStatus;
+  service_type?: ServiceType;
+  date_from?: string;
+  date_to?: string;
+  search?: string; // Search by order number, customer name, or contact
+}
+
+export interface OrderStats {
+  total_orders: number;
+  pending_orders: number;
+  today_orders: number;
+  today_revenue: number;
+  completed_orders: number;
+  cancelled_orders: number;
+}
+
+export interface RateLimitResponse {
+  allowed: boolean;
+  cooldown_remaining?: number; // seconds
+  message?: string;
+}
+
+// Address Autocomplete Types
+export interface AddressSuggestion {
+  display_name: string;
+  place_id: number;
+  lat: string;
+  lon: string;
+  address: {
+    road?: string;
+    house_number?: string;
+    suburb?: string;
+    village?: string;
+    barangay?: string;
+    city?: string;
+    town?: string;
+    municipality?: string;
+    state?: string;
+    province?: string;
+    postcode?: string;
+    country?: string;
+    neighbourhood?: string;
+    quarter?: string;
+    // For landmarks and POIs
+    amenity?: string;
+    shop?: string;
+    tourism?: string;
+  };
+  // Additional fields for better search
+  type?: string;
+  importance?: number;
 }

@@ -19,13 +19,31 @@ export const useSiteSettings = () => {
 
       if (error) throw error;
 
+      const settingsLookup: Record<string, string> = {};
+      (data || []).forEach((setting) => {
+        settingsLookup[setting.id] = setting.value;
+      });
+
+      const getValue = (key: string, fallback = '') =>
+        settingsLookup[key] ?? fallback;
+
       // Transform the data into a more usable format
       const settings: SiteSettings = {
-        site_name: data.find(s => s.id === 'site_name')?.value || 'Beracah Cafe',
-        site_logo: data.find(s => s.id === 'site_logo')?.value || '',
-        site_description: data.find(s => s.id === 'site_description')?.value || '',
-        currency: data.find(s => s.id === 'currency')?.value || 'PHP',
-        currency_code: data.find(s => s.id === 'currency_code')?.value || 'PHP'
+        site_name: getValue('site_name', 'Beracah Cafe'),
+        site_logo: getValue('site_logo', ''),
+        site_description: getValue('site_description', ''),
+        currency: getValue('currency', 'PHP'),
+        currency_code: getValue('currency_code', 'PHP'),
+        lalamove_market: getValue('lalamove_market', ''),
+        lalamove_service_type: getValue('lalamove_service_type', ''),
+        lalamove_sandbox: getValue('lalamove_sandbox', 'true'),
+        lalamove_api_key: getValue('lalamove_api_key', ''),
+        lalamove_api_secret: getValue('lalamove_api_secret', ''),
+        lalamove_store_name: getValue('lalamove_store_name', ''),
+        lalamove_store_phone: getValue('lalamove_store_phone', ''),
+        lalamove_store_address: getValue('lalamove_store_address', ''),
+        lalamove_store_latitude: getValue('lalamove_store_latitude', ''),
+        lalamove_store_longitude: getValue('lalamove_store_longitude', '')
       };
 
       setSiteSettings(settings);
